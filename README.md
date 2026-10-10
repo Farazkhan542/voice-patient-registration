@@ -114,6 +114,7 @@ Re-run step 5 whenever `PUBLIC_BASE_URL`, the secret, or the first message chang
 | `VAPI_API_KEY` | setup script | Vapi private key. Not needed by the running server. |
 | `VAPI_ASSISTANT_ID`, `VAPI_PHONE_NUMBER_ID` | no | Update an existing assistant / choose a specific number. |
 | `VAPI_VOICE_PROVIDER`, `VAPI_VOICE_ID` | no | Voice override. Blank uses Vapi's default voice. |
+| `VAPI_TRANSCRIBER_LANGUAGE` | no | Speech-to-text language: `en` (default) or `multi`. Applied by the setup script. |
 
 ## REST API
 
@@ -194,11 +195,12 @@ pytest
 - **Tool calls add a short pause** (two model round-trips) with no filler speech.
 - **Free-tier rate limits.** On Gemini's free tier the three models together allow roughly 40 requests per minute, enough for one call at a time. Concurrent calls need a paid key.
 - **The confirmation gate proves a read-back happened, not that the answer was yes.** Judging the caller's reply is still the model's job.
-- **Spanish text-to-speech** depends on the configured Vapi voice being multilingual; the default voice may speak Spanish with an English accent.
+- **Spanish is partial.** The agent replies in Spanish and records the language preference, but speech-to-text runs in English by default (`VAPI_TRANSCRIBER_LANGUAGE=en`), so spoken Spanish is recognised poorly. Setting it to `multi` enables English/Spanish recognition; it is off by default because it was not verified on a live call. The default voice may also speak Spanish with an English accent.
 - **Phone numbers are not unique** in the schema, because family members share numbers. Duplicate detection is done by the agent asking, not by a constraint.
 - **Names allow spaces** ("Mary Ann", "De La Cruz") in addition to the letters, hyphens and apostrophes in the brief.
 - **Schema is created with `create_all`**, with no migration tool.
 - **The Agents SDK and Vapi's custom-LLM protocol are not covered by automated tests**; they are exercised by real calls.
+- **The Vapi dashboard's Talk button tests a per-user draft** of the assistant, not the saved version. After running `setup_vapi.py`, discard any draft in the dashboard or the test call uses old settings.
 
 ## Next steps
 
