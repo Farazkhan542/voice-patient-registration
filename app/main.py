@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
-from app.db import SessionLocal, init_db
+from app.db import SessionLocal, engine, init_db
 from app.errors import ApiError, fail, field_errors, ok
 from app.routers import calls, patients, vapi
 from app.seed import seed_if_empty
@@ -64,7 +64,13 @@ async def handle_unexpected_error(_: Request, exc: Exception):
 
 @app.get("/health")
 def health():
-    return ok({"status": "ok"})
+    # Booleans only: enough to diagnose a misconfigured deploy without leaking values.
+    return ok({
+        "status": "ok",
+        "database": engine.dialect.name,
+        "llm_key_configured": bool(settings.llm_api_key),
+        "webhook_secret_configured": bool(settings.vapi_webhook_secret),
+    })
 
 
 @app.get("/", include_in_schema=False)
