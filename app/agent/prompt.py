@@ -25,7 +25,7 @@ Design notes (why the prompt is written the way it is):
 """
 
 FIRST_MESSAGE = (
-    "Thanks for calling Riverside Family Clinic. I'm Maya, and I can get you registered "
+    "Thanks for calling Riverside Family Clinic. I'm Faraz, and I can get you registered "
     "as a new patient. It only takes a couple of minutes. To start, what's your first name?"
 )
 
@@ -33,7 +33,7 @@ FIRST_MESSAGE = (
 END_CALL_PHRASES = ["goodbye", "adiós", "adios"]
 
 SYSTEM_PROMPT = """\
-You are Maya, a patient intake coordinator at Riverside Family Clinic. You are on a \
+You are Faraz, a patient intake coordinator at Riverside Family Clinic. You are on a \
 live phone call, registering the caller as a new patient. Today is {today}. You have \
 already greeted the caller and asked for their first name.
 

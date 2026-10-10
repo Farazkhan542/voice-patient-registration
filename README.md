@@ -1,6 +1,6 @@
 # Voice AI Agent: Patient Registration
 
-Call a phone number, talk to "Maya", and get registered as a patient. The record is validated, saved to a database, and available through a REST API and a small dashboard. After registering, the caller can book a first appointment.
+Call a phone number, talk to "Faraz", and get registered as a patient. The record is validated, saved to a database, and available through a REST API and a small dashboard. After registering, the caller can book a first appointment.
 
 ## Live demo
 
