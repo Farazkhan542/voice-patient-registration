@@ -54,6 +54,7 @@ class Settings:
     vapi_phone_number_id: str
     vapi_voice_provider: str
     vapi_voice_id: str
+    vapi_transcriber_language: str
 
 
 def load_settings() -> Settings:
@@ -72,6 +73,7 @@ def load_settings() -> Settings:
         vapi_phone_number_id=os.getenv("VAPI_PHONE_NUMBER_ID", ""),
         vapi_voice_provider=os.getenv("VAPI_VOICE_PROVIDER", ""),
         vapi_voice_id=os.getenv("VAPI_VOICE_ID", ""),
+        vapi_transcriber_language=os.getenv("VAPI_TRANSCRIBER_LANGUAGE", "en"),
     )
 
 

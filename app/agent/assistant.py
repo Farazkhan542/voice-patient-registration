@@ -29,8 +29,12 @@ def build_assistant_config(settings: Settings) -> dict:
             "url": f"{base_url}/vapi/llm/{secret}",
             "model": settings.llm_model,
         },
-        # Multilingual transcription so a caller can switch to Spanish mid-call.
-        "transcriber": {"provider": "deepgram", "model": "nova-3", "language": "multi"},
+        "transcriber": {
+            "provider": "deepgram",
+            "model": "nova-3",
+            # "multi" lets a caller switch to Spanish mid-call; "en" is the safe default.
+            "language": settings.vapi_transcriber_language,
+        },
         "server": {"url": f"{base_url}/vapi/webhook", "headers": {"X-Vapi-Secret": secret}},
         "serverMessages": ["end-of-call-report"],
         "endCallPhrases": END_CALL_PHRASES,
