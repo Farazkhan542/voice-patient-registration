@@ -1,0 +1,11 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+data/
+*.db
+
+# The assessment brief is marked confidential - keep it out of the repo.
+*.pdf
+.tools/

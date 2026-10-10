@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patient Registrations</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --panel: #ffffff; --ink: #18202b; --muted: #667085;
+    --line: #e3e6eb; --accent: #0f6e6a; --accent-soft: #e3f3f1;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { background: var(--panel); border-bottom: 1px solid var(--line); padding: 18px 24px;
+           display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  h1 { font-size: 18px; margin: 0; flex: 1; }
+  h1 small { display: block; font-weight: 400; font-size: 13px; color: var(--muted); }
+  input[type=search] { padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px;
+                       font: inherit; width: 260px; max-width: 100%; }
+  main { padding: 24px; max-width: 1200px; margin: 0 auto; }
+  .stats { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+          padding: 12px 18px; min-width: 150px; }
+  .stat b { display: block; font-size: 22px; }
+  .stat span { color: var(--muted); font-size: 12px; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 20px; align-items: start; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; background: #fafbfc; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover { background: #f8fafb; }
+  tbody tr.selected { background: var(--accent-soft); }
+  tbody tr:last-child td { border-bottom: 0; }
+  .empty { padding: 28px; color: var(--muted); text-align: center; }
+  .detail { padding: 18px; }
+  .detail h2 { margin: 0 0 2px; font-size: 16px; }
+  .detail .id { color: var(--muted); font-size: 12px; word-break: break-all; margin-bottom: 14px; }
+  dl { display: grid; grid-template-columns: 130px 1fr; gap: 6px 10px; margin: 0; }
+  dt { color: var(--muted); }
+  dd { margin: 0; word-break: break-word; }
+  h3 { font-size: 13px; margin: 18px 0 8px; color: var(--accent); }
+  .call { border-top: 1px solid var(--line); padding: 10px 0; }
+  .call .meta { color: var(--muted); font-size: 12px; }
+  pre { white-space: pre-wrap; background: #f8fafb; border: 1px solid var(--line); border-radius: 6px;
+        padding: 10px; margin: 8px 0 0; font: 12px/1.5 ui-monospace, Consolas, monospace;
+        max-height: 260px; overflow: auto; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } main { padding: 16px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Patient Registrations<small>Records captured by the voice agent and the REST API</small></h1>
+  <input type="search" id="search" placeholder="Search name or phone" aria-label="Search patients">
+</header>
+<main>
+  <div class="stats">
+    <div class="stat"><b id="stat-patients">-</b><span>Registered patients</span></div>
+    <div class="stat"><b id="stat-today">-</b><span>Registered today</span></div>
+    <div class="stat"><b id="stat-calls">-</b><span>Calls logged</span></div>
+  </div>
+  <div class="layout">
+    <div class="panel scroll">
+      <table>
+        <thead><tr><th>Name</th><th>Date of birth</th><th>Sex</th><th>Phone</th><th>City</th><th>Registered</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty" id="empty" hidden>No patients match.</div>
+    </div>
+    <div class="panel"><div class="detail" id="detail"><div class="empty">Select a patient to see the full record and call transcripts.</div></div></div>
+  </div>
+</main>
+<script>
+  // All values are inserted with textContent, never innerHTML, so stored data cannot inject markup.
+  const rows = document.getElementById('rows');
+  const detail = document.getElementById('detail');
+  const search = document.getElementById('search');
+  let patients = [];
+  let selectedId = null;
+
+  const el = (tag, text, className) => {
+    const node = document.createElement(tag);
+    if (text !== undefined && text !== null) node.textContent = text;
+    if (className) node.className = className;
+    return node;
+  };
+  const phone = (p) => p ? `(${p.slice(0, 3)}) ${p.slice(3, 6)}-${p.slice(6)}` : '';
+  const when = (iso) => iso ? new Date(iso).toLocaleString() : '';
+  const api = async (path) => {
+    const response = await fetch(path);
+    const body = await response.json();
+    if (body.error) throw new Error(body.error.message);
+    return body.data;
+  };
+
+  function renderRows() {
+    const term = search.value.trim().toLowerCase();
+    const digits = term.replace(/\D/g, '');
+    const visible = patients.filter((p) =>
+      !term || `${p.first_name} ${p.last_name}`.toLowerCase().includes(term) ||
+      (digits && p.phone_number.includes(digits)));
+    rows.replaceChildren(...visible.map((p) => {
+      const tr = el('tr', null, p.patient_id === selectedId ? 'selected' : '');
+      tr.append(el('td', `${p.first_name} ${p.last_name}`), el('td', p.date_of_birth), el('td', p.sex),
+                el('td', phone(p.phone_number)), el('td', `${p.city}, ${p.state}`), el('td', when(p.created_at)));
+      tr.addEventListener('click', () => select(p.patient_id));
+      return tr;
+    }));
+    document.getElementById('empty').hidden = visible.length > 0;
+  }
+
+  async function select(id) {
+    selectedId = id;
+    renderRows();
+    const p = patients.find((x) => x.patient_id === id);
+    if (!p) return;
+    const fields = [
+      ['Date of birth', p.date_of_birth], ['Sex', p.sex], ['Phone', phone(p.phone_number)],
+      ['Email', p.email],
+      ['Address', [p.address_line_1, p.address_line_2, `${p.city}, ${p.state} ${p.zip_code}`].filter(Boolean).join(', ')],
+      ['Insurance', p.insurance_provider], ['Member ID', p.insurance_member_id],
+      ['Language', p.preferred_language],
+      ['Emergency contact', [p.emergency_contact_name, phone(p.emergency_contact_phone)].filter(Boolean).join(' - ')],
+      ['Created', when(p.created_at)], ['Updated', when(p.updated_at)],
+    ];
+    const dl = el('dl');
+    for (const [label, value] of fields) dl.append(el('dt', label), el('dd', value || '-'));
+    const callsBox = el('div');
+    const visitsBox = el('div');
+    detail.replaceChildren(el('h2', `${p.first_name} ${p.last_name}`), el('div', p.patient_id, 'id'), dl,
+                           el('h3', 'Appointments'), visitsBox, el('h3', 'Calls'), callsBox);
+    try {
+      const visits = await api(`/patients/${id}/appointments`);
+      if (selectedId !== id) return;
+      if (!visits.length) visitsBox.append(el('div', 'No appointment booked.', 'meta'));
+      for (const visit of visits) {
+        const start = new Date(visit.starts_at).toLocaleString([], { dateStyle: 'full', timeStyle: 'short' });
+        visitsBox.append(el('div', `${start} (clinic time) with ${visit.provider}`));
+      }
+    } catch (error) {
+      visitsBox.append(el('div', 'Could not load appointments.', 'meta'));
+    }
+    try {
+      const calls = await api(`/patients/${id}/calls`);
+      if (selectedId !== id) return;
+      if (!calls.length) { callsBox.append(el('div', 'No calls linked to this record.', 'meta')); return; }
+      for (const call of calls) {
+        const box = el('div', null, 'call');
+        box.append(el('div', `${when(call.created_at)} - ${call.ended_reason || 'in progress'}`, 'meta'));
+        if (call.summary) box.append(el('div', call.summary));
+        if (call.transcript) box.append(el('pre', call.transcript));
+        callsBox.append(box);
+      }
+    } catch (error) {
+      callsBox.append(el('div', 'Could not load calls.', 'meta'));
+    }
+  }
+
+  async function refresh() {
+    try {
+      const [patientData, callData] = await Promise.all([api('/patients'), api('/calls')]);
+      patients = patientData;
+      const today = new Date().toDateString();
+      document.getElementById('stat-patients').textContent = patients.length;
+      document.getElementById('stat-today').textContent =
+        patients.filter((p) => new Date(p.created_at).toDateString() === today).length;
+      document.getElementById('stat-calls').textContent = callData.length;
+      renderRows();
+    } catch (error) {
+      document.getElementById('empty').hidden = false;
+      document.getElementById('empty').textContent = 'Could not load patients: ' + error.message;
+    }
+  }
+
+  search.addEventListener('input', renderRows);
+  refresh();
+  setInterval(refresh, 15000);
+</script>
+</body>
+</html>
