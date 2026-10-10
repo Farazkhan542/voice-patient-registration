@@ -7,11 +7,13 @@ Call a phone number, talk to "Maya", and get registered as a patient. The record
 | | |
 |---|---|
 | Phone number | **+1 (984) 246-9350** |
-| API base URL | `TODO: https://<your-app>.up.railway.app` |
-| Dashboard | `TODO: https://<your-app>.up.railway.app/dashboard` |
-| API docs (Swagger) | `<base URL>/docs` |
+| API base URL | https://voice-patient-registration-production-ab62.up.railway.app |
+| Dashboard | https://voice-patient-registration-production-ab62.up.railway.app/dashboard |
+| API docs (Swagger) | https://voice-patient-registration-production-ab62.up.railway.app/docs |
 
-No credentials are needed to call the number or use the API. Two seed patients (Jane Doe, Carlos Rivera) exist on first start.
+No credentials are needed to call the number or use the API. Two seed patients (Jane Doe, Carlos Rivera) exist on first start. Hosted on Railway with PostgreSQL.
+
+The LLM runs on Gemini's free tier, which is rate-limited: please place one call at a time.
 
 ## Architecture
 
@@ -127,7 +129,7 @@ Every response is `{ "data": ..., "error": null }` or `{ "data": null, "error": 
 | GET | `/patients/{id}/appointments` | Appointments booked for the patient |
 | GET | `/patients/{id}/calls` | Call transcripts linked to the patient |
 | GET | `/calls` | Most recent calls |
-| GET | `/health` | Liveness check |
+| GET | `/health` | Liveness check, plus which database is in use and whether the LLM key and secret are configured (booleans only) |
 
 Status codes: 200, 201, 400 (malformed JSON or id), 404, 422 (validation, with the failing field named), 500.
 
