@@ -146,8 +146,16 @@ def test_book_appointment_and_slot_is_no_longer_offered(client, patient_payload)
 
     remaining = [s["slot"] for s in run_tool("get_appointment_slots", {})["slots"]]
     assert chosen["slot"] not in remaining
+
+    # Repeating the same booking (a retry) succeeds without creating a second row.
     again = run_tool("book_appointment", {"patient_id": saved["patient_id"], "slot": chosen["slot"]})
-    assert again["status"] == "slot_unavailable"
+    assert again["status"] == "booked"
+    assert len(client.get(f"/patients/{saved['patient_id']}/appointments").json()["data"]) == 1
+
+    # A different patient cannot take the same slot.
+    other = run_tool("save_patient", {**patient_payload, "first_name": "Sam", "phone_number": "2125550147"})
+    taken = run_tool("book_appointment", {"patient_id": other["patient_id"], "slot": chosen["slot"]})
+    assert taken["status"] == "slot_unavailable"
 
 
 def test_book_appointment_rejects_made_up_slot_and_unknown_patient(client, patient_payload):

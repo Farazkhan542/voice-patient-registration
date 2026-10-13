@@ -50,6 +50,14 @@ def book_appointment(session: Session, patient_id: uuid.UUID, slot: str) -> Appo
         starts_at = datetime.strptime(slot.strip(), SLOT_FORMAT)
     except ValueError:
         return None
+    # Idempotent: a model-fallback retry may repeat a booking that already succeeded.
+    existing = session.scalar(
+        select(Appointment).where(
+            Appointment.patient_id == patient_id, Appointment.starts_at == starts_at
+        )
+    )
+    if existing is not None:
+        return existing
     if starts_at not in available_slots(session):
         return None
     appointment = Appointment(patient_id=patient_id, starts_at=starts_at, provider=PROVIDER)
