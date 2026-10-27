@@ -33,6 +33,7 @@ from openai.types.responses import ResponseTextDeltaEvent
 
 from app.agent.prompt import FIRST_MESSAGE, SYSTEM_PROMPT
 from app.agent.tools import run_tool
+from app.validation import normalize_phone
 from app.config import settings
 
 logger = logging.getLogger("voice_agent")
@@ -236,9 +237,25 @@ async def book_appointment(ctx: RunContextWrapper[CallContext], patient_id: str,
     return await _act(ctx, "book_appointment", {"patient_id": patient_id, "slot": slot})
 
 
-def _instructions(_ctx: RunContextWrapper[CallContext], _agent: Agent) -> str:
-    today = datetime.now(CLINIC_TIMEZONE).strftime("%A, %B %d, %Y")
-    return SYSTEM_PROMPT.replace("{today}", today)
+_YEAR_WORDS = {26: "twenty-six", 27: "twenty-seven", 28: "twenty-eight", 29: "twenty-nine", 30: "thirty"}
+
+
+def _caller_id_line(caller_number: str | None) -> str:
+    try:
+        digits = normalize_phone(caller_number or "")
+    except ValueError:
+        return "The caller's number is not available, so ask for it."
+    return f"The caller is calling from {digits}."
+
+
+def _instructions(ctx: RunContextWrapper[CallContext], _agent: Agent) -> str:
+    now = datetime.now(CLINIC_TIMEZONE)
+    hour = now.hour % 12 or 12
+    # The year is also given in words: the model has misread "2026" aloud as "twenty-sixteen".
+    stamp = (f"{now:%A, %B} {now.day}, {now.year} (spoken: twenty {_YEAR_WORDS.get(now.year % 100, now.year % 100)}), "
+             f"{hour}:{now:%M} {'AM' if now.hour < 12 else 'PM'}")
+    return (SYSTEM_PROMPT.replace("{now}", stamp)
+            .replace("{caller_id}", _caller_id_line(ctx.context.caller_number)))
 
 
 _llm_client = AsyncOpenAI(

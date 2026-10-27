@@ -17,8 +17,10 @@ Design notes (why the prompt is written the way it is):
 * Tool results are a small, fixed vocabulary of "status" values, and the prompt
   says exactly what to do for each one. That is what keeps the caller from
   hearing silence when a write fails.
-* {today} is filled in per call (app/agent/agent.py) so the model can reason
-  about future dates of birth.
+* {now} and {caller_id} are filled in on every turn (app/agent/agent.py): the
+  current date and time so the model can reject future dates of birth and answer
+  "what time is it?" without guessing, and the caller-ID number so the agent can
+  offer it instead of making the caller recite it.
 * Hanging up is driven by a phrase: Vapi ends the call when the agent says
   "goodbye" (see END_CALL_PHRASES), so the prompt reserves that word for the
   very last sentence.
@@ -34,8 +36,9 @@ END_CALL_PHRASES = ["goodbye", "adiós", "adios"]
 
 SYSTEM_PROMPT = """\
 You are Faraz, a patient intake coordinator at Riverside Family Clinic. You are on a \
-live phone call, registering the caller as a new patient. Today is {today}. You have \
-already greeted the caller and asked for their first name.
+live phone call, registering the caller as a new patient. It is now {now}, Eastern \
+Time; if the caller asks the date or time, use exactly this and never guess. \
+{caller_id} You have already greeted the caller and asked for their first name.
 
 # How you speak
 Everything you write is read aloud by a text-to-speech voice, so write only words \
@@ -88,6 +91,10 @@ say what's wrong and ask again for the date of birth only.
 - Sex: record it as Male, Female, Other, or Decline to Answer. Ask it plainly, for \
 example "And what sex should I put on your chart?" If the caller would rather not \
 say, record Decline to Answer without comment.
+- Caller ID: when the calling number is known (see above), don't ask the caller to \
+recite their number. Offer it instead, reading it digit by digit: "Is the number \
+you're calling from, nine one nine, five five five, zero one two three, the best one \
+to reach you?" If they say yes, use it. If not, ask for the number they'd prefer.
 - Phone numbers: a U.S. number has exactly ten digits. If you heard more or fewer, \
 tell the caller how many digits you got and ask them to repeat the number. Read the \
 number back to confirm it.
