@@ -38,7 +38,8 @@ def build_assistant_config(settings: Settings) -> dict:
         "server": {"url": f"{base_url}/vapi/webhook", "headers": {"X-Vapi-Secret": secret}},
         "serverMessages": ["end-of-call-report"],
         "endCallPhrases": END_CALL_PHRASES,
-        "silenceTimeoutSeconds": 30,
+        # Generous: free-tier LLM replies can take 10-20 s, and callers pause to find details.
+        "silenceTimeoutSeconds": 60,
         "maxDurationSeconds": 900,
     }
     if settings.vapi_voice_provider and settings.vapi_voice_id:
