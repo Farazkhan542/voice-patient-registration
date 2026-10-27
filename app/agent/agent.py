@@ -28,6 +28,7 @@ from agents import (
     function_tool,
     set_tracing_disabled,
 )
+import httpx
 from openai import APIError, AsyncOpenAI
 from openai.types.responses import ResponseTextDeltaEvent
 
@@ -265,6 +266,9 @@ _llm_client = AsyncOpenAI(
     # No client-side retry backoff: on a phone call it is faster to move to the
     # next model than to wait for the same one.
     max_retries=0,
+    # Vapi drops the call if a reply takes ~30 s. A stalled model is abandoned after
+    # 8 s so the fallbacks (and, last, the spoken apology) still fit in that window.
+    timeout=httpx.Timeout(8.0, connect=4.0),
 )
 
 
