@@ -18,7 +18,11 @@ def _llm_settings() -> tuple[str, str, list[str]]:
     `models` is tried in order: the first is the primary, the rest are fallbacks used
     when a model is rate-limited or failing. Gemini's free tier has a separate
     per-minute quota for each model, so the fallbacks add real headroom there."""
-    if os.getenv("OPENROUTER_API_KEY"):
+    if os.getenv("LLM_API_KEY"):
+        # Any OpenAI-compatible provider (e.g. Groq): set LLM_BASE_URL and LLM_MODEL too.
+        key, base_url = os.environ["LLM_API_KEY"], os.getenv("LLM_BASE_URL", "")
+        model, fallbacks = os.getenv("LLM_MODEL", ""), ""
+    elif os.getenv("OPENROUTER_API_KEY"):
         key, base_url = os.environ["OPENROUTER_API_KEY"], OPENROUTER_ENDPOINT
         model, fallbacks = "google/gemini-2.5-flash", ""
     else:
